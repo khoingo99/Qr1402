@@ -355,12 +355,13 @@ dataRef.current = new Uint8Array(analyser.frequencyBinCount);
 
       // fallback: nếu không có beat (hoặc tắt nhạc) -> 1s / dòng
       const playing = musicOn && audioRef.current && !audioRef.current.paused;
-      if (!playing && !showFinal) {
-        if (now - lastFallbackText >= FALLBACK_TEXT_INTERVAL) {
-          lastFallbackText = now;
-          spawnLineCentered(now);
-        }
-      }
+      // fallback: KHÔNG CẦN NHẠC – vẫn 1s / dòng
+if (!showFinal) {
+  if (!playing && now - lastFallbackText >= FALLBACK_TEXT_INTERVAL) {
+    lastFallbackText = now;
+    spawnLineCentered(now);
+  }
+}
 
       // ❤️ tim bay đều (kể cả khi không beat)
       if (now - lastHeartTime >= HEART_INTERVAL) {
