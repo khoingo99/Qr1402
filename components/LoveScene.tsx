@@ -51,11 +51,10 @@ export default function LoveScene({ to, msg, date }: Props) {
       "Anh muốn được đồng hành cùng em",
        "Anh muốn được chăm sóc em",
        "Anh muốn được lo cho em",
-       "Anh muốn được làm chỗ dựa vững chắc nhất cho em",
+       "Anh muốn được làm chỗ dựa cho em",
      "I Love you",
       `Mãi bên cạnh anh nhé`,
       `${to} mãi là công chúa của anh`,
-      
         "Cảm ơn em đã bước vào cuộc đời anh",
         "Cùng anh chia sẻ mọi buồn vui em nhé",
          "Làm người yêu anh nhé",
@@ -175,7 +174,7 @@ export default function LoveScene({ to, msg, date }: Props) {
 
     const spawnText = (now: number) => {
       lines.push({
-        text: phrases[Math.floor(Math.random() * phrases.length)],
+        text: phrases[Math.floor( phrases.length)],
         y: h + lines.length * LINE_GAP,
         born: now,
         alpha: 0,
