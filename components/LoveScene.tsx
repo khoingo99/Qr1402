@@ -36,6 +36,15 @@ export default function LoveScene({ to, msg, date }: Props) {
   const [started, setStarted] = useState(false);
   const [musicOn, setMusicOn] = useState(true);
 
+  // ====== slideshow ======
+const [showSlideshow, setShowSlideshow] = useState(false);
+const [slideIndex, setSlideIndex] = useState(0);
+const slideshowStartedRef = useRef(false);
+
+// 4 ảnh: bỏ vào public/pics/1.jpg ... 4.jpg
+const IMAGES = ["/pics/1.jpg", "/pics/2.jpg", "/pics/3.jpg", "/pics/4.jpg", "/pics/5.jpg"];
+const SLIDE_MS = 1500; // mỗi ảnh 1.5s (đổi 2000 nếu muốn chậm)
+
   /* ================= CONFIG ================= */
   const TEXT_DELAY = 5000; // ⏳ 5s sau click mới hiện chữ
   const TEXT_INTERVAL = 1500; // ⏱ 1s / dòng
@@ -173,21 +182,33 @@ const phrases = useMemo(
       });
     };
     let phraseIndex = 0;
-    const spawnText = (now: number) => {
+    let finishedText = false;
+let finishedAt = 0;
+  const spawnText = (now: number) => {
+  // dừng khi hết câu
+  if (phraseIndex >= phrases.length) return;
+
+  const text = phrases[phraseIndex];
+  phraseIndex++;
+
   lines.push({
-    text: phrases[phraseIndex % phrases.length] || "",
+    text,
     y: h + lines.length * LINE_GAP,
     born: now,
     alpha: 0,
     hue: Math.random() * 360,
   });
 
-  phraseIndex++;
+  // nếu vừa xong câu cuối -> đánh dấu
+  if (phraseIndex >= phrases.length) {
+    finishedText = true;
+    finishedAt = now;
+  }
 };
-
     const tick = (t: number) => {
       if (!startTime && started) startTime = t;
 
+      // background
       ctx.fillStyle = "rgba(0,0,0,0.25)";
       ctx.fillRect(0, 0, w, h);
 
@@ -255,6 +276,17 @@ const phrases = useMemo(
     };
   }, [started, phrases]);
 
+useEffect(() => {
+  if (!showSlideshow) return;
+
+  setSlideIndex(0);
+  const id = window.setInterval(() => {
+    setSlideIndex((i) => (i + 1) % IMAGES.length);
+  }, SLIDE_MS);
+
+  return () => window.clearInterval(id);
+}, [showSlideshow]);
+
   /* ================= RENDER ================= */
   return (
     <div className="relative min-h-dvh bg-black overflow-hidden">
@@ -276,6 +308,29 @@ const phrases = useMemo(
         <div className="absolute top-0 left-0 right-0 z-30 flex items-center px-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }} > {/* trái: spacer */} <div /> {/* giữa: luôn 1 dòng */} <div className="flex-1 flex justify-center overflow-hidden"> <div className="px-3 py-1 rounded-full bg-black/35 border border-white/10"> <span className="text-sm font-bold flex items-center gap-1 whitespace-nowrap" style={{ background: "linear-gradient(90deg, #ff4da6, #ffd54a, #57e389, #4da3ff, #b56bff)", WebkitBackgroundClip: "text", color: "transparent", textShadow: "0 0 14px rgba(255,255,255,0.15)", letterSpacing: "0.3px", }} > --- Gửi Tới {TOP_TO_NAME} <span style={{ color: "#32d26e", textShadow: "0 0 8px rgba(50,210,110,0.9)", }} > 🍀 </span> --- </span> </div> </div>
         </div>
       )}
+      {showSlideshow && (
+  <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 p-5">
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img
+      key={slideIndex}
+      src={IMAGES[slideIndex]}
+      alt={`slide-${slideIndex + 1}`}
+      className="max-w-full max-h-[78vh] rounded-2xl shadow-2xl border border-white/10 animate-[fadeIn_0.55s_ease-out]"
+    />
+    <style jsx>{`
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: scale(0.985);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+    `}</style>
+  </div>
+)}
     </div>
   );
 }
