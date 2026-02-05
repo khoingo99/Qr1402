@@ -111,23 +111,28 @@ dataRef.current = new Uint8Array(analyser.frequencyBinCount);
   };
 
   /* ======================= MUSIC ======================= */
-  const startExperience = async () => {
-    setStarted(true);
+ const startExperience = async () => {
+  setStarted(true);
 
-    if (!musicOn) return;
-    const a = audioRef.current;
-    if (!a) return;
+  // 🔥 THÊM DÒNG NÀY: sinh ngay dòng chữ đầu tiên
+  requestAnimationFrame(() => {
+    const now = performance.now();
+    // @ts-ignore – dùng trực tiếp trong effect
+    spawnLineCentered?.(now);
+  });
 
-    try {
-      ensureAnalyser();
-      if (audioCtxRef.current?.state === "suspended") {
-        await audioCtxRef.current.resume();
-      }
-      await a.play();
-    } catch {
-      // ignore
+  if (!musicOn) return;
+  const a = audioRef.current;
+  if (!a) return;
+
+  try {
+    ensureAnalyser();
+    if (audioCtxRef.current?.state === "suspended") {
+      await audioCtxRef.current.resume();
     }
-  };
+    await a.play();
+  } catch {}
+};
 
   const toggleMusic = async () => {
     const a = audioRef.current;
@@ -242,7 +247,7 @@ dataRef.current = new Uint8Array(analyser.frequencyBinCount);
         y: h + 40,
         vx: (Math.random() - 0.5) * 0.18,
         vy: -(Math.random() * 0.42 + 0.30),
-        px: 18 + Math.random() * 26, // ✅ tim rõ (18..44)
+        px: 1+ Math.random() * 10, // ✅ tim rõ (18..44)
         alpha: 0.95,
         hue,
         rot: Math.random() * Math.PI * 2,
@@ -495,7 +500,6 @@ dataRef.current = new Uint8Array(analyser.frequencyBinCount);
           <div className="text-white/85 text-sm font-medium">
             Chạm vào trái tim
           </div>
-          <div className="text-white/50 text-xs">(Có thể xoay ngang màn hình)</div>
         </button>
       )}
 
