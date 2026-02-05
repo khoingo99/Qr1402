@@ -4,31 +4,28 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 type Props = { to: string; msg: string; date: string };
 
-type Particle =
-  | {
-      kind: "text";
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      text: string;
-      size: number;
-      alpha: number;
-      hue: number;
-    }
-  | {
-      kind: "heart";
-      x: number;
-      y: number;
-      vx: number;
-      vy: number;
-      px: number; // size theo pixel (rõ, không bị quá nhỏ)
-      alpha: number;
-      hue: number;
-      rot: number;
-      vr: number;
-      pulse: number; // nhịp đập theo nhạc
-    };
+type HeartParticle = {
+  kind: "heart";
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  px: number; // size theo pixel
+  alpha: number;
+  hue: number;
+  rot: number;
+  vr: number;
+  pulse: number; // nhịp đập theo nhạc
+};
+
+type TextLine = {
+  id: number;
+  text: string;
+  y: number;
+  alpha: number;
+  hue: number;
+  born: number; // performance.now()
+};
 
 export default function LoveScene({ to, msg, date }: Props) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -38,10 +35,10 @@ export default function LoveScene({ to, msg, date }: Props) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataRef = useRef<Uint8Array | null>(null);
-  const mediaSrcRef = useRef<MediaElementAudioSourceNode | null>(null);
+
   const beatRef = useRef({
-    amp: 0, // 0..1
-    smooth: 0, // smoothing
+    amp: 0,
+    smooth: 0,
     lastBeat: 0,
   });
 
@@ -50,6 +47,12 @@ export default function LoveScene({ to, msg, date }: Props) {
 
   // text cứng theo yêu cầu
   const TOP_TO_NAME = "Thanh Chúc";
+
+  const FINAL_MESSAGE = "Làm người yêu anh nhé 💖";
+  const MAX_LINES = 10; // đủ “lyric” rồi chốt
+  const POP_MS = 300; // ✨ pop-in 0.3s
+  const LINE_GAP = 34;
+  const SCROLL_SPEED = 0.42; // tốc độ chữ đi lên
 
   const phrases = useMemo(() => {
     const base = [
@@ -62,6 +65,7 @@ export default function LoveScene({ to, msg, date }: Props) {
       `Chúc ${to} valentine vui vẻ`,
       date,
     ];
+    // ưu tiên msg và câu chính xuất hiện nhiều hơn
     return base.flatMap((t) => [t, t]);
   }, [to, msg, date]);
 
@@ -70,7 +74,6 @@ export default function LoveScene({ to, msg, date }: Props) {
     const audioEl = audioRef.current;
     if (!audioEl) return;
 
-    // đã tạo rồi thì thôi
     if (audioCtxRef.current && analyserRef.current && dataRef.current) return;
 
     const Ctx =
@@ -89,7 +92,6 @@ export default function LoveScene({ to, msg, date }: Props) {
     audioCtxRef.current = ctx;
     analyserRef.current = analyser;
     dataRef.current = new Uint8Array(analyser.frequencyBinCount);
-    mediaSrcRef.current = src;
   };
 
   const readAmplitude = () => {
@@ -97,15 +99,15 @@ export default function LoveScene({ to, msg, date }: Props) {
     const arr = dataRef.current;
     if (!analyser || !arr) return 0;
 
-    analyser.getByteFrequencyData(arr as Uint8Array<ArrayBuffer>);
+dataRef.current = new Uint8Array(analyser.frequencyBinCount);
 
-    // lấy năng lượng dải thấp (bass-ish) để “đập” rõ hơn
+    // lấy năng lượng dải thấp để beat rõ hơn
     const n = arr.length;
     const lowEnd = Math.max(8, Math.floor(n * 0.18));
     let sum = 0;
     for (let i = 0; i < lowEnd; i++) sum += arr[i];
     const avg = sum / lowEnd; // 0..255
-    return Math.min(1, avg / 180); // normalize
+    return Math.min(1, avg / 180);
   };
 
   /* ======================= MUSIC ======================= */
@@ -118,13 +120,12 @@ export default function LoveScene({ to, msg, date }: Props) {
 
     try {
       ensureAnalyser();
-      // resume context if suspended (Safari)
       if (audioCtxRef.current?.state === "suspended") {
         await audioCtxRef.current.resume();
       }
       await a.play();
     } catch {
-      // ignore autoplay errors
+      // ignore
     }
   };
 
@@ -160,19 +161,22 @@ export default function LoveScene({ to, msg, date }: Props) {
     let h = 0;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
 
-    const particles: Particle[] = [];
+    const hearts: HeartParticle[] = [];
     const stars: { x: number; y: number; r: number; a: number }[] = [];
 
-    // đỡ rối mắt
-    const MAX_PARTICLES = 75;
+    const lines: TextLine[] = [];
+    let lineId = 1;
+    let showFinal = false;
+    let finalAlpha = 0;
 
-    // yêu cầu: chữ cách nhau 1s
-    const TEXT_INTERVAL = 1000;
+    const MAX_HEARTS = 80;
+
+    // Fallback nếu không có beat / không bật nhạc
+    const FALLBACK_TEXT_INTERVAL = 1000;
+    let lastFallbackText = 0;
 
     // tim bay đều
-    const HEART_INTERVAL = 500;
-
-    let lastTextTime = 0;
+    const HEART_INTERVAL = 450;
     let lastHeartTime = 0;
 
     const resize = () => {
@@ -198,7 +202,6 @@ export default function LoveScene({ to, msg, date }: Props) {
       }
     };
 
-    // tim vẽ theo px => nhìn rõ trên mobile
     const drawHeart = (
       x: number,
       y: number,
@@ -212,11 +215,10 @@ export default function LoveScene({ to, msg, date }: Props) {
       ctx.translate(x, y);
       ctx.rotate(rot);
 
-      // glow theo màu (nhưng vừa phải)
       ctx.shadowColor = `hsla(${hue}, 95%, 65%, 1)`;
       ctx.shadowBlur = 20;
 
-      const s = px / 24; // base 24px
+      const s = px / 24;
       ctx.scale(s, s);
 
       ctx.beginPath();
@@ -230,40 +232,52 @@ export default function LoveScene({ to, msg, date }: Props) {
       ctx.restore();
     };
 
-    const spawnText = () => {
-      if (particles.length >= MAX_PARTICLES) return;
-      const hue = Math.random() * 360;
-
-      particles.push({
-        kind: "text",
-        x: Math.random() * w,
-        y: h + 40,
-        vx: (Math.random() - 0.5) * 0.14,
-        vy: -(Math.random() * 0.38 + 0.28),
-        text: phrases[Math.floor(Math.random() * phrases.length)],
-        size: 14 + Math.random() * 8,
-        alpha: 0.9,
-        hue,
-      });
-    };
-
     const spawnHeart = (extraPulse = 0) => {
-      if (particles.length >= MAX_PARTICLES) return;
+      if (hearts.length >= MAX_HEARTS) return;
       const hue = Math.random() * 360;
 
-      particles.push({
+      hearts.push({
         kind: "heart",
         x: Math.random() * w,
         y: h + 40,
         vx: (Math.random() - 0.5) * 0.18,
         vy: -(Math.random() * 0.42 + 0.30),
-        px: 1 + Math.random() * 10, // 18..44px (rõ)
+        px: 18 + Math.random() * 26, // ✅ tim rõ (18..44)
         alpha: 0.95,
         hue,
         rot: Math.random() * Math.PI * 2,
         vr: (Math.random() - 0.5) * 0.03,
         pulse: extraPulse,
       });
+    };
+
+    const nextPhrase = () => phrases[Math.floor(Math.random() * phrases.length)];
+
+    // ✅ Chữ luôn ở GIỮA, xếp hàng theo thứ tự, không chạy lộn nhau
+    const spawnLineCentered = (now: number) => {
+      if (showFinal) return;
+      if (lines.length >= MAX_LINES) {
+        showFinal = true;
+        return;
+      }
+
+      const hue = Math.random() * 360;
+      const centerY = h / 2;
+
+      // dòng mới luôn nằm “cuối stack”
+      lines.push({
+        id: lineId++,
+        text: nextPhrase(),
+        y: centerY + lines.length * LINE_GAP,
+        alpha: 0,
+        hue,
+        born: now,
+      });
+
+      if (lines.length >= MAX_LINES) {
+        // ngay sau khi đủ dòng -> chốt
+        showFinal = true;
+      }
     };
 
     const drawStartScene = () => {
@@ -279,35 +293,34 @@ export default function LoveScene({ to, msg, date }: Props) {
       }
       ctx.globalAlpha = 1;
 
-      // tim giữa nhấp nháy
       const t = Date.now() * 0.004;
       const pulse = 1 + Math.sin(t) * 0.06;
       drawHeart(w / 2, h / 2, 46 * pulse, 1, 330, 0);
     };
 
     const tick = (t: number) => {
-      // cập nhật beat (khi đã có analyser & nhạc đang chạy)
-      let amp = 0;
+      // update beat
       if (started && musicOn && audioRef.current && !audioRef.current.paused) {
-        amp = readAmplitude();
+        const amp = readAmplitude();
         const b = beatRef.current;
 
-        // smooth amplitude
         b.smooth = b.smooth * 0.82 + amp * 0.18;
         b.amp = b.smooth;
 
-        // detect "beat" thô: vượt ngưỡng + cooldown
         const now = performance.now();
-        const beat = b.amp > 0.38 && now - b.lastBeat > 220;
-        if (beat) b.lastBeat = now;
+        const isBeat = b.amp > 0.38 && now - b.lastBeat > 240;
+        if (isBeat) b.lastBeat = now;
 
-        // nếu beat, bơm thêm tim “đập”
-        if (beat) {
+        // 🎵 Đồng bộ dòng mới theo beat
+        if (isBeat) {
+          spawnLineCentered(now);
+
+          // beat thì bơm thêm tim “đập”
           spawnHeart(0.55);
-          if (Math.random() < 0.5) spawnHeart(0.35);
+          if (Math.random() < 0.45) spawnHeart(0.35);
         }
       } else {
-        // giảm dần khi tắt nhạc
+        // decay khi tắt nhạc
         const b = beatRef.current;
         b.smooth = b.smooth * 0.9;
         b.amp = b.smooth;
@@ -319,7 +332,7 @@ export default function LoveScene({ to, msg, date }: Props) {
         return;
       }
 
-      // trail
+      // background trail
       ctx.fillStyle = "rgba(0,0,0,0.22)";
       ctx.fillRect(0, 0, w, h);
 
@@ -333,56 +346,119 @@ export default function LoveScene({ to, msg, date }: Props) {
       }
       ctx.globalAlpha = 1;
 
-      // ⏱ chữ 1s / dòng
-      if (t - lastTextTime >= TEXT_INTERVAL) {
-        lastTextTime = t;
-        spawnText();
+      const now = performance.now();
+
+      // fallback: nếu không có beat (hoặc tắt nhạc) -> 1s / dòng
+      const playing = musicOn && audioRef.current && !audioRef.current.paused;
+      if (!playing && !showFinal) {
+        if (now - lastFallbackText >= FALLBACK_TEXT_INTERVAL) {
+          lastFallbackText = now;
+          spawnLineCentered(now);
+        }
       }
 
-      // ❤️ tim đều đều, nhiều màu
-      if (t - lastHeartTime >= HEART_INTERVAL) {
-        lastHeartTime = t;
+      // ❤️ tim bay đều (kể cả khi không beat)
+      if (now - lastHeartTime >= HEART_INTERVAL) {
+        lastHeartTime = now;
         spawnHeart(beatRef.current.amp * 0.35);
         if (Math.random() < 0.35) spawnHeart(beatRef.current.amp * 0.25);
       }
 
-      const beatAmp = beatRef.current.amp; // 0..1
+      const beatAmp = beatRef.current.amp;
 
-      // draw particles
-      for (const p of particles) {
-        p.x += p.vx;
-        p.y += p.vy;
+      // ====== Update & draw TEXT LINES (center + ordered) ======
+      const centerY = h / 2;
 
-        if (p.kind === "text") {
-          ctx.save();
-          ctx.globalAlpha = p.alpha;
+      // 🫶 Khi showFinal -> “đứng lại”: không scroll nữa
+      const allowScroll = !showFinal;
 
-          // giảm nhòe
-          ctx.shadowColor = `hsla(${p.hue}, 90%, 65%, 0.9)`;
-          ctx.shadowBlur = 6;
-          ctx.font = `500 ${p.size}px system-ui, -apple-system, Segoe UI, Roboto`;
-          ctx.fillStyle = `hsla(${p.hue}, 90%, 72%, 1)`;
-          ctx.fillText(p.text, p.x, p.y);
-          ctx.restore();
-        } else {
-          p.rot += p.vr;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
 
-          // tim “đập” theo nhạc: scale theo amp + pulse riêng của tim
-          const pulse =
-            1 +
-            Math.min(0.22, beatAmp * 0.22) +
-            Math.min(0.18, p.pulse * 0.18);
+        // fade in
+        line.alpha = Math.min(1, line.alpha + 0.035);
 
-          // decay pulse
-          p.pulse *= 0.92;
+        // giữ stack đúng khoảng cách: baseY theo index
+        // base mục tiêu:
+        const targetY = centerY + i * LINE_GAP;
 
-          drawHeart(p.x, p.y, p.px * pulse, p.alpha, p.hue, p.rot);
+        // nhẹ nhàng kéo về đúng target (tránh lộn xộn)
+        line.y += (targetY - line.y) * 0.12;
+
+        // scroll toàn stack lên
+        if (allowScroll && lines.length > 1) {
+          line.y -= SCROLL_SPEED;
+        }
+
+        // ✨ pop-in 0.3s cho dòng mới
+        const age = now - line.born;
+        const popT = Math.min(1, Math.max(0, age / POP_MS));
+        const popScale = 1 + (1 - popT) * 0.18; // bắt đầu lớn hơn, rồi về 1
+
+        ctx.save();
+        ctx.globalAlpha = line.alpha;
+
+        ctx.textAlign = "center";
+        ctx.shadowColor = `hsla(${line.hue}, 90%, 65%, 0.85)`;
+        ctx.shadowBlur = 6;
+
+        ctx.font = `500 20px system-ui, -apple-system, Segoe UI, Roboto`;
+        ctx.fillStyle = `hsla(${line.hue}, 90%, 72%, 1)`;
+
+        ctx.translate(w / 2, line.y);
+        ctx.scale(popScale, popScale);
+        ctx.fillText(line.text, 0, 0);
+
+        ctx.restore();
+      }
+
+      // cleanup text (khi còn scroll)
+      if (allowScroll) {
+        while (lines.length && lines[0].y < -60) {
+          lines.shift();
         }
       }
 
-      // cleanup
-      for (let i = particles.length - 1; i >= 0; i--) {
-        if (particles[i].y < -160) particles.splice(i, 1);
+      // 🫶 Final message (fade in, đứng lại)
+      if (showFinal) {
+        finalAlpha = Math.min(1, finalAlpha + 0.02);
+
+        ctx.save();
+        ctx.globalAlpha = finalAlpha;
+
+        const hue = 330;
+        ctx.textAlign = "center";
+        ctx.shadowColor = `hsla(${hue}, 95%, 65%, 1)`;
+        ctx.shadowBlur = 18;
+
+        const beatPulse = 1 + Math.min(0.18, beatAmp * 0.18);
+        ctx.translate(w / 2, centerY + 10);
+        ctx.scale(beatPulse, beatPulse);
+
+        ctx.font = `700 26px system-ui, -apple-system, Segoe UI, Roboto`;
+        ctx.fillStyle = `hsla(${hue}, 95%, 70%, 1)`;
+        ctx.fillText(FINAL_MESSAGE, 0, 0);
+        ctx.restore();
+      }
+
+      // ====== Update & draw HEARTS ======
+      for (const p of hearts) {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vr;
+
+        const pulse =
+          1 +
+          Math.min(0.22, beatAmp * 0.22) +
+          Math.min(0.18, p.pulse * 0.18);
+
+        p.pulse *= 0.92;
+
+        drawHeart(p.x, p.y, p.px * pulse, p.alpha, p.hue, p.rot);
+      }
+
+      for (let i = hearts.length - 1; i >= 0; i--) {
+        if (hearts[i].y < -180) hearts.splice(i, 1);
       }
 
       raf = requestAnimationFrame(tick);
@@ -419,6 +495,7 @@ export default function LoveScene({ to, msg, date }: Props) {
           <div className="text-white/85 text-sm font-medium">
             Chạm vào trái tim
           </div>
+          <div className="text-white/50 text-xs">(Có thể xoay ngang màn hình)</div>
         </button>
       )}
 
@@ -428,10 +505,8 @@ export default function LoveScene({ to, msg, date }: Props) {
           className="absolute top-0 left-0 right-0 z-30 flex items-center px-3"
           style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }}
         >
-          {/* trái: spacer */}
           <div className="w-16" />
 
-          {/* giữa: luôn 1 dòng */}
           <div className="flex-1 flex justify-center overflow-hidden">
             <div className="px-3 py-1 rounded-full bg-black/35 border border-white/10">
               <span
@@ -460,7 +535,6 @@ export default function LoveScene({ to, msg, date }: Props) {
             </div>
           </div>
 
-          {/* phải: nút nhạc */}
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -475,7 +549,7 @@ export default function LoveScene({ to, msg, date }: Props) {
         </div>
       )}
 
-      {/* Bottom small label (tùy thích) */}
+      {/* Bottom small label */}
       {started && (
         <div
           className="absolute bottom-6 w-full text-center text-white/55 text-xs z-10 pointer-events-none"
