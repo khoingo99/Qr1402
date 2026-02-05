@@ -38,9 +38,9 @@ export default function LoveScene({ to, msg, date }: Props) {
 
   /* ================= CONFIG ================= */
   const TEXT_DELAY = 5000; // ⏳ 5s sau click mới hiện chữ
-  const TEXT_INTERVAL = 1000; // ⏱ 1s / dòng
+  const TEXT_INTERVAL = 1500; // ⏱ 1s / dòng
   const TEXT_LIFETIME = 5000; // 🌫 5s thì mờ dần
-  const TEXT_SPEED = 0.35; // ⬆️ tốc độ đi lên
+  const TEXT_SPEED = 0.55; // ⬆️ tốc độ đi lên
   const LINE_GAP = 32;
 
   const TOP_TO_NAME = "Thanh Chúc";
@@ -156,7 +156,7 @@ export default function LoveScene({ to, msg, date }: Props) {
         y: h + 20,
         vx: (Math.random() - 0.5) * 0.2,
         vy: -(Math.random() * 0.5 + 0.3),
-        size: 18 + Math.random() * 26,
+        size: 1+ Math.random() * 15,
         hue: Math.random() * 360,
         alpha: 0.9,
         rot: Math.random() * Math.PI,
@@ -263,17 +263,7 @@ export default function LoveScene({ to, msg, date }: Props) {
       )}
 
       {started && (
-        <div
-          className="absolute top-0 left-0 right-0 z-30 flex items-center px-3"
-          style={{ paddingTop: "env(safe-area-inset-top)" }}
-        >
-          <div className="flex-1 text-center text-sm font-bold bg-black/40 rounded-full px-3 py-1">
-            --- Gửi Tới {TOP_TO_NAME}{" "}
-            <span style={{ color: "#32d26e" }}>🍀</span> ---
-          </div>
-          <button onClick={toggleMusic} className="ml-3 text-xs text-white">
-            {musicOn ? "🔊" : "🔇"}
-          </button>
+        <div className="absolute top-0 left-0 right-0 z-30 flex items-center px-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }} > {/* trái: spacer */} <div className="w-16" /> {/* giữa: luôn 1 dòng */} <div className="flex-1 flex justify-center overflow-hidden"> <div className="px-3 py-1 rounded-full bg-black/35 border border-white/10"> <span className="text-sm font-bold flex items-center gap-1 whitespace-nowrap" style={{ background: "linear-gradient(90deg, #ff4da6, #ffd54a, #57e389, #4da3ff, #b56bff)", WebkitBackgroundClip: "text", color: "transparent", textShadow: "0 0 14px rgba(255,255,255,0.15)", letterSpacing: "0.3px", }} > --- Gửi Tới {TOP_TO_NAME} <span className="ml-1" style={{ color: "#32d26e", textShadow: "0 0 8px rgba(50,210,110,0.9)", }} > 🍀 </span> --- </span> </div> </div>
         </div>
       )}
     </div>
