@@ -233,6 +233,14 @@ let finishedAt = 0;
           spawnText(t);
         }
       }
+      if (
+        finishedText &&
+        !slideshowStartedRef.current &&
+        t - finishedAt >= 800
+      ) {
+        slideshowStartedRef.current = true;
+        setShowSlideshow(true);
+      }
 
       // ⬆️ draw text
       ctx.textAlign = "center";
@@ -308,29 +316,31 @@ useEffect(() => {
         <div className="absolute top-0 left-0 right-0 z-30 flex items-center px-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }} > {/* trái: spacer */} <div /> {/* giữa: luôn 1 dòng */} <div className="flex-1 flex justify-center overflow-hidden"> <div className="px-3 py-1 rounded-full bg-black/35 border border-white/10"> <span className="text-sm font-bold flex items-center gap-1 whitespace-nowrap" style={{ background: "linear-gradient(90deg, #ff4da6, #ffd54a, #57e389, #4da3ff, #b56bff)", WebkitBackgroundClip: "text", color: "transparent", textShadow: "0 0 14px rgba(255,255,255,0.15)", letterSpacing: "0.3px", }} > --- Gửi Tới {TOP_TO_NAME} <span style={{ color: "#32d26e", textShadow: "0 0 8px rgba(50,210,110,0.9)", }} > 🍀 </span> --- </span> </div> </div>
         </div>
       )}
+      {/* ✅ Slideshow 4 ảnh liên tục */}
       {showSlideshow && (
-  <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 p-5">
-    {/* eslint-disable-next-line @next/next/no-img-element */}
-    <img
-      key={slideIndex}
-      src={IMAGES[slideIndex]}
-      alt={`slide-${slideIndex + 1}`}
-      className="max-w-full max-h-[78vh] rounded-2xl shadow-2xl border border-white/10 animate-[fadeIn_0.55s_ease-out]"
-    />
-    <style jsx>{`
-      @keyframes fadeIn {
-        from {
-          opacity: 0;
-          transform: scale(0.985);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1);
-        }
-      }
-    `}</style>
-  </div>
-)}
+        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/60 p-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={slideIndex} // key để trigger fade animation mỗi lần đổi ảnh
+            src={IMAGES[slideIndex]}
+            alt={`slide-${slideIndex + 1}`}
+            className="max-w-full max-h-[78vh] rounded-2xl shadow-2xl border border-white/10 animate-[fadeIn_0.55s_ease-out]"
+          />
+
+          <style jsx>{`
+            @keyframes fadeIn {
+              from {
+                opacity: 0;
+                transform: scale(0.985);
+              }
+              to {
+                opacity: 1;
+                transform: scale(1);
+              }
+            }
+          `}</style>
+        </div>
+      )}
     </div>
   );
 }
