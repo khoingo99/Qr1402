@@ -1,25 +1,11 @@
-import dynamic from "next/dynamic";
-
-const LinkMaker = dynamic(() => import("@/components/LinkMaker"), {
-  ssr: false,
-  loading: () => (
-    <main className="min-h-dvh bg-black text-white p-6">
-      <h1 className="text-2xl font-semibold">Love QR</h1>
-      <p className="text-white/70 mt-2">Loading...</p>
-    </main>
-  ),
-});
+export const dynamic = "force-dynamic";
 
 export default function Home() {
   return (
-    <main className="min-h-dvh bg-black text-white p-6">
-      <h1 className="text-2xl font-semibold">Love QR</h1>
-      <p className="text-white/70 mt-2">
-        Tạo link + QR (an toàn build Vercel).
-      </p>
-      <div className="mt-6">
-        <LinkMaker />
-      </div>
+    <main style={{ minHeight: "100vh", background: "black", color: "white", display: "grid", placeItems: "center" }}>
+      <a href="/v" style={{ padding: 16, borderRadius: 999, background: "#ec4899", color: "white", textDecoration: "none" }}>
+        Mở quà Valentine 💖
+      </a>
     </main>
   );
 }
