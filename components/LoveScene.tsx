@@ -171,16 +171,18 @@ export default function LoveScene({ to, msg, date }: Props) {
         pulse,
       });
     };
-
+    let phraseIndex = 0;
     const spawnText = (now: number) => {
-      lines.push({
-        text: phrases[Math.floor( phrases.length)],
-        y: h + lines.length * LINE_GAP,
-        born: now,
-        alpha: 0,
-        hue: Math.random() * 360,
-      });
-    };
+  lines.push({
+    text: phrases[phraseIndex % phrases.length],
+    y: h + lines.length * LINE_GAP,
+    born: now,
+    alpha: 0,
+    hue: Math.random() * 360,
+  });
+
+  phraseIndex++;
+};
 
     const tick = (t: number) => {
       if (!startTime && started) startTime = t;
