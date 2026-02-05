@@ -45,25 +45,25 @@ export default function LoveScene({ to, msg, date }: Props) {
 
   const TOP_TO_NAME = "Thanh Chúc";
 
-  const phrases = useMemo(
-    () => [
-      msg,
-      "Anh muốn được đồng hành cùng em",
-       "Anh muốn được chăm sóc em",
-       "Anh muốn được lo cho em",
-       "Anh muốn được làm chỗ dựa cho em",
-     "I Love you",
-     "Mãi bên cạnh anh em nhé",
-      "Em mãi là công chúa của anh nhé",
-        "Cảm ơn em đã bước vào cuộc đời anh",
-        "Cùng anh chia sẻ mọi buồn vui em nhé",
-         "Làm người yêu anh nhé",
-          "우리 만나볼래?",
-           "내 마음을 받아줘",
-      date,
-    ],
-    [to, msg, date]
-  );
+const phrases = useMemo(
+  () => [
+    msg,
+    "Anh muốn được đồng hành cùng em",
+     "Anh muốn được chăm sóc em",
+     "Anh muốn được lo cho em",
+     "Anh muốn được làm chỗ dựa cho em",
+    "Nếu em đang mỉm cười…quay sang nhìn anh nhé.",
+       "Làm người yêu anh nhé",
+        "우리 만나볼래?",
+         "내 마음을 받아줘",
+          "I Love you",
+           "Cảm ơn em đã bước vào cuộc đời anh",
+          "Mãi bên cạnh anh,em nhé!",
+          "Cùng anh chia sẻ mọi buồn vui em nhé",
+    date,
+  ].filter((p): p is string => p !== undefined),
+  [to, msg, date]
+);
 
   /* ================= AUDIO ================= */
   const ensureAnalyser = () => {
@@ -174,7 +174,7 @@ export default function LoveScene({ to, msg, date }: Props) {
     let phraseIndex = 0;
     const spawnText = (now: number) => {
   lines.push({
-    text: phrases[phraseIndex % phrases.length],
+    text: phrases[phraseIndex % phrases.length] || "",
     y: h + lines.length * LINE_GAP,
     born: now,
     alpha: 0,
