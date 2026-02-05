@@ -48,11 +48,19 @@ export default function LoveScene({ to, msg, date }: Props) {
   const phrases = useMemo(
     () => [
       msg,
-      "Làm người yêu anh nhé",
-      "Love you",
-      `Mãi bên cạnh ${to} nhé`,
-      `Hứa sẽ yêu ${to} như ngày đầu`,
+      "Anh muốn được đồng hành cùng em",
+       "Anh muốn được chăm sóc em",
+       "Anh muốn được lo cho em",
+       "Anh muốn được làm chỗ dựa vững chắc nhất cho em",
+     "I Love you",
+      `Mãi bên cạnh anh nhé`,
       `${to} mãi là công chúa của anh`,
+      
+        "Cảm ơn em đã bước vào cuộc đời anh",
+        "Cùng anh chia sẻ mọi buồn vui em nhé",
+         "Làm người yêu anh nhé",
+          "우리 만나볼래?",
+           "내 마음을 받아줘",
       date,
     ],
     [to, msg, date]
@@ -263,7 +271,7 @@ export default function LoveScene({ to, msg, date }: Props) {
       )}
 
       {started && (
-        <div className="absolute top-0 left-0 right-0 z-30 flex items-center px-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }} > {/* trái: spacer */} <div className="w-16" /> {/* giữa: luôn 1 dòng */} <div className="flex-1 flex justify-center overflow-hidden"> <div className="px-3 py-1 rounded-full bg-black/35 border border-white/10"> <span className="text-sm font-bold flex items-center gap-1 whitespace-nowrap" style={{ background: "linear-gradient(90deg, #ff4da6, #ffd54a, #57e389, #4da3ff, #b56bff)", WebkitBackgroundClip: "text", color: "transparent", textShadow: "0 0 14px rgba(255,255,255,0.15)", letterSpacing: "0.3px", }} > --- Gửi Tới {TOP_TO_NAME} <span className="ml-1" style={{ color: "#32d26e", textShadow: "0 0 8px rgba(50,210,110,0.9)", }} > 🍀 </span> --- </span> </div> </div>
+        <div className="absolute top-0 left-0 right-0 z-30 flex items-center px-3" style={{ paddingTop: "calc(env(safe-area-inset-top) + 10px)" }} > {/* trái: spacer */} <div /> {/* giữa: luôn 1 dòng */} <div className="flex-1 flex justify-center overflow-hidden"> <div className="px-3 py-1 rounded-full bg-black/35 border border-white/10"> <span className="text-sm font-bold flex items-center gap-1 whitespace-nowrap" style={{ background: "linear-gradient(90deg, #ff4da6, #ffd54a, #57e389, #4da3ff, #b56bff)", WebkitBackgroundClip: "text", color: "transparent", textShadow: "0 0 14px rgba(255,255,255,0.15)", letterSpacing: "0.3px", }} > --- Gửi Tới {TOP_TO_NAME} <span style={{ color: "#32d26e", textShadow: "0 0 8px rgba(50,210,110,0.9)", }} > 🍀 </span> --- </span> </div> </div>
         </div>
       )}
     </div>
