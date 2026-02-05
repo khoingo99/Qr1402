@@ -1,3 +1,4 @@
+"use client";
 import LoveScene from "@/components/LoveScene";
 
 export default async function Page({

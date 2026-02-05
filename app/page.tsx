@@ -1,3 +1,4 @@
+"use client";
 import LinkMaker from "@/components/LinkMaker";
 
 export default function Home() {
